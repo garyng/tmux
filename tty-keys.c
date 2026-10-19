@@ -1134,8 +1134,15 @@ tty_keys_extended_key(struct tty *tty, const char *buf, size_t len,
 		if (sscanf(tmp, "27;%u;%u", &modifiers, &number) != 2)
 			return (-1);
 	} else {
-		if (sscanf(tmp ,"%u;%u", &number, &modifiers) != 2)
+		switch (sscanf(tmp, "%u;%u", &number, &modifiers)) {
+		case 1:
+			modifiers = 1;	/* kitty leaves out a modifier of 1 */
+			break;
+		case 2:
+			break;
+		default:
 			return (-1);
+		}
 	}
 	*size = end + 1;
 
