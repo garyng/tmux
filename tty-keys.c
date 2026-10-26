@@ -616,6 +616,25 @@ tty_keys_partial_paste_end(const char *buf, size_t len)
 	return (memcmp(buf, paste_end, len) == 0);
 }
 
+/*
+ * Is this the start of an SGR mouse report? A terminal on a slow connection
+ * can send one in two parts, which escape-time is too short for, and nobody
+ * types \033[< by hand.
+ */
+static int
+tty_keys_partial_mouse(const char *buf, size_t len)
+{
+	size_t	i;
+
+	if (len < 3 || buf[0] != '\033' || buf[1] != '[' || buf[2] != '<')
+		return (0);
+	for (i = 3; i < len; i++) {
+		if ((buf[i] < '0' || buf[i] > '9') && buf[i] != ';')
+			return (0);
+	}
+	return (1);
+}
+
 /* Look up part of the next key. */
 static int
 tty_keys_next1(struct tty *tty, const char *buf, size_t len, key_code *key,
@@ -973,6 +992,11 @@ partial_key:
 	if ((tty->flags & TTY_BRACKETPASTE) &&
 	    tty_keys_partial_paste_end(buf, len)) {
 		log_debug("%s: increasing delay (partial paste end)", c->name);
+		if (delay < 500)
+			delay = 500;
+	}
+	if (tty_keys_partial_mouse(buf, len)) {
+		log_debug("%s: increasing delay (partial mouse)", c->name);
 		if (delay < 500)
 			delay = 500;
 	}
