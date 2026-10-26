@@ -529,6 +529,8 @@ input_key_vt10x(struct bufferevent *bev, key_code key)
 			key = onlykey - '\030';
 		else if (onlykey >= '@' && onlykey <= '~')
 			key = onlykey & 0x1f;
+		else if (onlykey == 0x7f)
+			key = C0_BS;	/* C-BSpace, as terminals send it */
 		else
 			return (-1);
 	}
