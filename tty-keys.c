@@ -1492,6 +1492,20 @@ tty_keys_clipboard(struct tty *tty, const char *buf, size_t len, size_t *size)
 }
 
 /*
+ * Whether tmux's own requests to the terminal are still open: the start timer
+ * runs for TTY_QUERY_TIMEOUT from each attach and each repeat, and no response
+ * stops it early. A device attributes response tmux already has, arriving
+ * then, is the terminal answering twice (seen through Windows Terminal over
+ * ssh), so it is discarded; later, it may be for a pane that asked through
+ * passthrough, and is passed on as keys.
+ */
+static int
+tty_keys_requests_open(struct tty *tty)
+{
+	return (evtimer_pending(&tty->start_timer, NULL));
+}
+
+/*
  * Handle primary device attributes input. Returns 0 for success, -1 for
  * failure, 1 for partial.
  */
@@ -1504,7 +1518,7 @@ tty_keys_device_attributes(struct tty *tty, const char *buf, size_t len,
 	char		 tmp[128], *endptr, p[32] = { 0 }, *cp, *next;
 
 	*size = 0;
-	if (tty->flags & TTY_HAVEDA)
+	if ((tty->flags & TTY_HAVEDA) && !tty_keys_requests_open(tty))
 		return (-1);
 
 	/* First three bytes are always \033[?. */
@@ -1535,6 +1549,11 @@ tty_keys_device_attributes(struct tty *tty, const char *buf, size_t len,
 		return (-1);
 	tmp[i] = '\0';
 	*size = 4 + i;
+	if (tty->flags & TTY_HAVEDA) {
+		log_debug("%s: discarding repeated primary DA %.*s", c->name,
+		    (int)*size, buf);
+		return (0);
+	}
 
 	/* Convert all arguments to numbers. */
 	cp = tmp;
@@ -1635,7 +1654,7 @@ tty_keys_device_attributes2(struct tty *tty, const char *buf, size_t len,
 	char		 tmp[128], *endptr, p[32] = { 0 }, *cp, *next;
 
 	*size = 0;
-	if (tty->flags & TTY_HAVEDA2)
+	if ((tty->flags & TTY_HAVEDA2) && !tty_keys_requests_open(tty))
 		return (-1);
 
 	/* First three bytes are always \033[>. */
@@ -1666,6 +1685,11 @@ tty_keys_device_attributes2(struct tty *tty, const char *buf, size_t len,
 		return (-1);
 	tmp[i] = '\0';
 	*size = 4 + i;
+	if (tty->flags & TTY_HAVEDA2) {
+		log_debug("%s: discarding repeated secondary DA %.*s", c->name,
+		    (int)*size, buf);
+		return (0);
+	}
 
 	/* Convert all arguments to numbers. */
 	cp = tmp;
@@ -1714,7 +1738,7 @@ tty_keys_extended_device_attributes(struct tty *tty, const char *buf,
 	char		 tmp[128];
 
 	*size = 0;
-	if (tty->flags & TTY_HAVEXDA)
+	if ((tty->flags & TTY_HAVEXDA) && !tty_keys_requests_open(tty))
 		return (-1);
 
 	/* First four bytes are always \033P>|. */
@@ -1746,6 +1770,11 @@ tty_keys_extended_device_attributes(struct tty *tty, const char *buf,
 	if (i == (sizeof tmp) - 1)
 		return (-1);
 	*size = 5 + i;
+	if (tty->flags & TTY_HAVEXDA) {
+		log_debug("%s: discarding repeated extended DA %.*s", c->name,
+		    (int)*size, buf);
+		return (0);
+	}
 	if (i == 0)
 		return (0);
 	tmp[i - 1] = '\0';
