@@ -383,13 +383,19 @@ recalculate_size(struct window *w, int now)
 
 	/*
 	 * Make sure the size has actually changed. If the window has already
-	 * got a resize scheduled, then use the new size; otherwise the old.
+	 * got a resize scheduled, then use the new size; otherwise the old. A
+	 * cell size the clients know counts too: the window's turns an image's
+	 * pixels into cells.
 	 */
 	if (w->flags & WINDOW_RESIZE) {
-		if (!now && changed && w->new_sx == sx && w->new_sy == sy)
+		if (!now && changed && w->new_sx == sx && w->new_sy == sy &&
+		    (xpixel == 0 || w->new_xpixel == xpixel) &&
+		    (ypixel == 0 || w->new_ypixel == ypixel))
 			changed = 0;
 	} else {
-		if (!now && changed && w->sx == sx && w->sy == sy)
+		if (!now && changed && w->sx == sx && w->sy == sy &&
+		    (xpixel == 0 || w->xpixel == xpixel) &&
+		    (ypixel == 0 || w->ypixel == ypixel))
 			changed = 0;
 	}
 
