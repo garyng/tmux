@@ -1614,7 +1614,7 @@ tty_keys_sync(struct tty *tty, const char *buf, size_t len, size_t *size)
 	int			 status;
 
 	*size = 0;
-	if (tty->flags & TTY_HAVESYNC)
+	if ((tty->flags & TTY_HAVESYNC) && !tty_keys_requests_open(tty))
 		return (-1);
 
 	/* The response is always \033[?2026;Ps$y. */
@@ -1638,6 +1638,11 @@ tty_keys_sync(struct tty *tty, const char *buf, size_t len, size_t *size)
 	if (buf[i++] != 'y')
 		return (-1);
 	*size = i;
+	if (tty->flags & TTY_HAVESYNC) {
+		log_debug("%s: discarding repeated DECRPM %.*s", c->name,
+		    (int)*size, buf);
+		return (0);
+	}
 
 	if (status == 1 || status == 2 || status == 3) {
 		tty_parse_client_features(c, "sync", ",");
