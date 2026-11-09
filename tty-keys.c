@@ -702,8 +702,12 @@ tty_keys_winsz(struct tty *tty, const char *buf, size_t len, size_t *size)
 
 	*size = 0;
 
-	/* If we did not request this, ignore it. */
-	if (!(tty->flags & TTY_WINSIZEQUERY))
+	/*
+	 * If we did not request this, ignore it. A repeated answer, while the
+	 * query's timer runs, is parsed: typed into a pane, it would show.
+	 */
+	if (!(tty->flags & TTY_WINSIZEQUERY) &&
+	    !evtimer_pending(&tty->winsize_timer, NULL))
 		return (-1);
 
 	/* First two bytes are always \033[. */
@@ -746,8 +750,11 @@ tty_keys_winsz(struct tty *tty, const char *buf, size_t len, size_t *size)
 		/* Window size in pixels. */
 		char_x = (xpixel && tty->sx) ? xpixel / tty->sx : 0;
 		char_y = (ypixel && tty->sy) ? ypixel / tty->sy : 0;
-		tty_set_size(tty, tty->sx, tty->sy, char_x, char_y);
-		tty_invalidate(tty);
+		if (char_x != 0 && char_y != 0) {
+			tty_set_size(tty, tty->sx, tty->sy, char_x, char_y);
+			tty_invalidate(tty);
+			tty->flags |= TTY_HAVEWINSIZE;
+		}
 
 		tty->flags &= ~TTY_WINSIZEQUERY;
 		*size = end + 1;

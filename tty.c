@@ -37,6 +37,7 @@ static int	tty_log_fd = -1;
 
 static void	tty_start_timer_callback(int, short, void *);
 static void	tty_clipboard_query_callback(int, short, void *);
+static void	tty_winsize_query_callback(int, short, void *);
 static void	tty_set_italics(struct tty *);
 static int	tty_try_colour(struct tty *, int, const char *);
 static void	tty_force_cursor_colour(struct tty *, int);
@@ -120,12 +121,29 @@ tty_init(struct tty *tty, struct client *c)
 	return (0);
 }
 
+/*
+ * The terminal's own size in pixels is asked for even when the pty reports
+ * one, since the pty's can be wrong: Windows' ssh.exe reports 640x480 for any
+ * window. Once the terminal has answered, its cell size is kept until it
+ * answers again. An answer that never comes closes the query after
+ * TTY_QUERY_TIMEOUT, and one that comes twice inside it is not typed into
+ * the pane.
+ */
+static void
+tty_winsize_query_callback(__unused int fd, __unused short events, void *data)
+{
+	struct tty	*tty = data;
+
+	tty->flags &= ~TTY_WINSIZEQUERY;
+}
+
 void
 tty_resize(struct tty *tty)
 {
 	struct client	*c = tty->client;
 	struct winsize	 ws;
 	u_int		 sx, sy, xpixel, ypixel;
+	struct timeval	 tv = { .tv_sec = TTY_QUERY_TIMEOUT };
 
 	if (ioctl(c->fd, TIOCGWINSZ, &ws) != -1) {
 		sx = ws.ws_col;
@@ -141,12 +159,17 @@ tty_resize(struct tty *tty)
 		} else
 			ypixel = ws.ws_ypixel / sy;
 
-		if ((xpixel == 0 || ypixel == 0) &&
-		    tty->out != NULL &&
+		if (tty->flags & TTY_HAVEWINSIZE) {
+			xpixel = tty->xpixel;
+			ypixel = tty->ypixel;
+		}
+
+		if (tty->out != NULL &&
 		    !(tty->flags & TTY_WINSIZEQUERY) &&
 		    (tty->term->flags & TERM_VT100LIKE)) {
 			tty_puts(tty, "\033[18t\033[14t");
 			tty->flags |= TTY_WINSIZEQUERY;
+			evtimer_add(&tty->winsize_timer, &tv);
 		}
 	} else {
 		sx = 80;
@@ -298,6 +321,7 @@ tty_open(struct tty *tty, char **cause)
 		fatal("out of memory");
 
 	evtimer_set(&tty->clipboard_timer, tty_clipboard_query_callback, tty);
+	evtimer_set(&tty->winsize_timer, tty_winsize_query_callback, tty);
 	evtimer_set(&tty->start_timer, tty_start_timer_callback, tty);
 	evtimer_set(&tty->timer, tty_timer_callback, tty);
 
@@ -462,6 +486,7 @@ tty_stop_tty(struct tty *tty)
 
 	evtimer_del(&tty->start_timer);
 	evtimer_del(&tty->clipboard_timer);
+	evtimer_del(&tty->winsize_timer);
 
 	event_del(&tty->timer);
 	tty->flags &= ~TTY_BLOCK;
