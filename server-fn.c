@@ -362,6 +362,7 @@ server_destroy_pane(struct window_pane *wp, int notify)
 	u_int			 sx = screen_size_x(&wp->base);
 	u_int			 sy = screen_size_y(&wp->base);
 
+	program_status_drop(wp, PROGRAM_STATUS_RUNNING);
 	if (wp->fd != -1) {
 #ifdef HAVE_UTEMPTER
 		utempter_remove_record(wp->fd);

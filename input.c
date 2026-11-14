@@ -174,6 +174,7 @@ static void	input_osc_110(struct input_ctx *, const char *);
 static void	input_osc_111(struct input_ctx *, const char *);
 static void	input_osc_112(struct input_ctx *, const char *);
 static void	input_osc_133(struct input_ctx *, const char *);
+static void	input_osc_7501(struct input_ctx *, const char *);
 
 /* Transition entry/exit handlers. */
 static void	input_clear(struct input_ctx *);
@@ -1405,6 +1406,8 @@ input_esc_dispatch(struct input_ctx *ictx)
 
 	switch (entry->type) {
 	case INPUT_ESC_RIS:
+		if (ictx->wp != NULL)
+			program_status_drop(ictx->wp, PROGRAM_STATUS_ALL);
 		colour_palette_clear(ictx->palette);
 		input_reset_cell(ictx);
 		screen_write_reset(sctx);
@@ -2772,10 +2775,31 @@ input_exit_osc(struct input_ctx *ictx)
 	case 133:
 		input_osc_133(ictx, p);
 		break;
+	case 7501:
+		input_osc_7501(ictx, p);
+		break;
 	default:
 		log_debug("%s: unknown '%u'", __func__, option);
 		break;
 	}
+}
+
+/*
+ * Handle the OSC 7501 sequence for program status: answer the probe ("?"), or
+ * keep a report (program-status.c).
+ */
+static void
+input_osc_7501(struct input_ctx *ictx, const char *p)
+{
+	struct window_pane	*wp = ictx->wp;
+
+	if (wp == NULL)
+		return;
+	if (*p == '?') {
+		input_reply(ictx, 1, "\033]7501;?\033\\");
+		return;
+	}
+	program_status_report(wp, p);
 }
 
 /* APC string started. */
@@ -3286,6 +3310,7 @@ input_osc_133(struct input_ctx *ictx, const char *p)
 		}
 		if (wp != NULL) {
 			wp->last_prompt_time = time(NULL);
+			program_status_drop(wp, PROGRAM_STATUS_RUNNING);
 			events_fire_pane("pane-shell-prompt", wp);
 		}
 		break;

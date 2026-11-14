@@ -2151,6 +2151,60 @@ format_cb_synchronized_output_flag(struct format_tree *ft)
 	return (NULL);
 }
 
+/* Callback for pane_program_app. */
+static void *
+format_cb_pane_program_app(struct format_tree *ft)
+{
+	if (ft->wp != NULL)
+		return (program_status_get(ft->wp, "app"));
+	return (NULL);
+}
+
+/* Callback for pane_program_kind. */
+static void *
+format_cb_pane_program_kind(struct format_tree *ft)
+{
+	if (ft->wp != NULL)
+		return (program_status_get(ft->wp, "kind"));
+	return (NULL);
+}
+
+/* Callback for pane_program_msg. */
+static void *
+format_cb_pane_program_msg(struct format_tree *ft)
+{
+	if (ft->wp != NULL)
+		return (program_status_get(ft->wp, "msg"));
+	return (NULL);
+}
+
+/* Callback for pane_program_progress. */
+static void *
+format_cb_pane_program_progress(struct format_tree *ft)
+{
+	if (ft->wp != NULL)
+		return (program_status_get(ft->wp, "progress"));
+	return (NULL);
+}
+
+/* Callback for pane_program_state. */
+static void *
+format_cb_pane_program_state(struct format_tree *ft)
+{
+	if (ft->wp != NULL)
+		return (program_status_get(ft->wp, "state"));
+	return (NULL);
+}
+
+/* Callback for pane_program_title. */
+static void *
+format_cb_pane_program_title(struct format_tree *ft)
+{
+	if (ft->wp != NULL)
+		return (program_status_get(ft->wp, "title"));
+	return (NULL);
+}
+
 /* Callback for pane_private_modes. */
 static void *
 format_cb_pane_private_modes(struct format_tree *ft)
@@ -3944,6 +3998,24 @@ static const struct format_table_entry format_table[] = {
 	},
 	{ "pane_private_modes", FORMAT_TABLE_STRING,
 	  format_cb_pane_private_modes
+	},
+	{ "pane_program_app", FORMAT_TABLE_STRING,
+	  format_cb_pane_program_app
+	},
+	{ "pane_program_kind", FORMAT_TABLE_STRING,
+	  format_cb_pane_program_kind
+	},
+	{ "pane_program_msg", FORMAT_TABLE_STRING,
+	  format_cb_pane_program_msg
+	},
+	{ "pane_program_progress", FORMAT_TABLE_STRING,
+	  format_cb_pane_program_progress
+	},
+	{ "pane_program_state", FORMAT_TABLE_STRING,
+	  format_cb_pane_program_state
+	},
+	{ "pane_program_title", FORMAT_TABLE_STRING,
+	  format_cb_pane_program_title
 	},
 	{ "pane_right", FORMAT_TABLE_STRING,
 	  format_cb_pane_right

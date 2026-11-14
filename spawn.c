@@ -345,6 +345,9 @@ spawn_pane(struct spawn_context *sc, char **cause)
 				control_reset_pane(loop, sc->wp0);
 		}
 
+		/* The old program is gone, and with it what it was running. */
+		program_status_drop(sc->wp0, PROGRAM_STATUS_RUNNING);
+
 		new_wp = sc->wp0;
 		new_wp->flags &= ~(PANE_STATUSREADY|PANE_STATUSDRAWN);
 	} else {

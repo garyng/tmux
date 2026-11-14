@@ -1626,6 +1626,7 @@ window_pane_free(struct window_pane *wp)
 	colour_palette_free(&wp->palette);
 	style_ranges_free(&wp->border_status_line.ranges);
 	free(wp->border_status_line.expanded);
+	program_status_free(wp);
 	free(wp);
 }
 
@@ -2076,6 +2077,8 @@ window_pane_key(struct window_pane *wp, struct client *c, struct session *s,
 
 	if (KEYC_IS_MOUSE(key) && m == NULL)
 		return (-1);
+	if (!KEYC_IS_MOUSE(key))
+		program_status_drop(wp, PROGRAM_STATUS_FINISHED);
 
 	wme = TAILQ_FIRST(&wp->modes);
 	if (wme != NULL) {

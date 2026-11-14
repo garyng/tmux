@@ -65,6 +65,7 @@ struct menu_data;
 struct mode_tree_data;
 struct mouse_event;
 struct options;
+struct program_status;
 struct options_array_item;
 struct options_entry;
 struct prompt;
@@ -1367,6 +1368,7 @@ struct window_pane {
 	uint64_t	 output_generation;
 	time_t		 last_output_time;
 	time_t		 last_prompt_time;
+	struct program_status *program;	/* OSC 7501 records */
 	time_t		 cmd_start_time;
 	time_t		 cmd_end_time;
 	int		 cmd_status;
@@ -3404,6 +3406,15 @@ void	 status_prompt_cursor(struct client *, u_int *, u_int *);
 enum prompt_key_result status_prompt_key(struct client *, key_code,
 	     struct mouse_event *);
 void	 status_prompt_update(struct client *, const char *, const char *);
+
+/* program-status.c */
+#define PROGRAM_STATUS_RUNNING 0
+#define PROGRAM_STATUS_FINISHED 1
+#define PROGRAM_STATUS_ALL 2
+int		 program_status_report(struct window_pane *, const char *);
+void		 program_status_drop(struct window_pane *, int);
+void		 program_status_free(struct window_pane *);
+char		*program_status_get(struct window_pane *, const char *);
 
 /* prompt.c */
 void	 prompt_set_options(struct prompt_create_data *, struct session *);
