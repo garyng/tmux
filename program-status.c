@@ -18,6 +18,9 @@
 
 #include <sys/types.h>
 
+#include <netinet/in.h>
+
+#include <resolv.h>
 #include <stdlib.h>
 #include <string.h>
 
